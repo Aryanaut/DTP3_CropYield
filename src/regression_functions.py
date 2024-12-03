@@ -1,7 +1,7 @@
 import numpy as np
 
-def normalize_z(array: np.ndarray, columns_means: Optional[np.ndarray]=None, 
-                columns_stds: Optional[np.ndarray]=None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def normalize_z(array: np.ndarray, columns_means=None,
+                columns_stds=None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     if columns_means is None:
         columns_means=np.mean(array,axis=0)
     if columns_stds is None:
@@ -11,42 +11,57 @@ def normalize_z(array: np.ndarray, columns_means: Optional[np.ndarray]=None,
     
     return out, columns_means, columns_stds
 
-def normalize_minmax(array_in: np.ndarray, columns_mins: Optional[np.ndarray]=None, 
-                     columns_maxs: Optional[np.ndarray]=None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    out=array_in.copy()
-    columns_mins = np.min(out, axis=0, keepdims=True) if columns_mins is None else columns_mins
-    columns_maxs = np.max(out, axis=0, keepdims=True) if columns_maxs is None else columns_maxs
-    out = (out-columns_mins)/(columns_maxs-columns_mins)
-    return out, columns_mins, columns_maxs
+def normalize_array(array):
+    mean = array.mean(axis=0)
+    std = array.std(axis=0)
+    return (array - mean) / std
 
 class MVF:
 
     # ind: independant variable matrix, np array, size = no. of data points * no. of dependant variables
-    # dep: depdendant variable matrix, same size as ind
+    # dep: depdendant variable matrix, size = no. of data points * 1
 
     def __init__(self, ind, dep):
     
         self.lr = 0.01
         self.iterations = 1000
-        self.weights = np.zeros(X.shape[1])
         self.ind = ind
         self.dep = dep
+        self.weights = np.zeros((self.ind.shape[1], 1))
     
         self.costs = []
+    
+    def normalize_z(self, array: np.ndarray, columns_means=None,
+                columns_stds=None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        if columns_means is None:
+            columns_means=np.mean(array,axis=0)
+        if columns_stds is None:
+            columns_stds=np.std(array,axis=0)
+            
+        out = (array-columns_means)/columns_stds
+        
+        return out, columns_means, columns_stds
 
-    def _compute_cost(self):
+    def normalize_data(self):
+        self.ind = normalize_array(self.ind)
+        self.dep = normalize_array(self.dep)
+
+    def _compute_cost(self, ind, weights):
         m = len(self.dep)
-        predictions = np.dot(self.ind, weights)
+        predictions = np.dot(ind, weights)
         cost = (1 / (2 * m)) * np.sum((predictions - self.dep) ** 2)
         return cost
     
-    def gradient_descent(self, X, y, weights, lr, iterations):
+    def gradient_descent(self):
+        ind = self.ind = np.c_[np.ones(self.ind.shape[0]), self.ind]
+        weights = np.zeros((self.ind.shape[1], 1))
         m = len(self.dep)
         for _ in range(self.iterations):
-            predictions = np.dot(self.ind, self.weights)
+            predictions = np.dot(ind, weights)
             errors = predictions - self.dep
-            gradient = (1 / m) * np.dot(self.ind.T, errors)
+            gradient = (1 / m) * np.dot(ind.T, errors)
             weights -= self.lr * gradient
-            cost = self._compute_cost()
+            cost = self._compute_cost(ind, weights)
             self.costs.append(cost)
-        return weights
+
+        self.weights = weights[1:4]
