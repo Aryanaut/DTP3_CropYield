@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib import pyplot as plt
 
 def normalize_z(array: np.ndarray, columns_means=None,
                 columns_stds=None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -14,7 +15,7 @@ def normalize_z(array: np.ndarray, columns_means=None,
 def normalize_array(array):
     mean = array.mean(axis=0)
     std = array.std(axis=0)
-    return (array - mean) / std
+    return (array - mean) / std, mean, std
 
 class MVF:
 
@@ -25,11 +26,13 @@ class MVF:
     
         self.lr = 0.01
         self.iterations = 1000
+        self.IND = ind
         self.ind = ind
         self.dep = dep
         self.weights = np.zeros((self.ind.shape[1], 1))
     
         self.costs = []
+        self.predictions = None
     
     def normalize_z(self, array: np.ndarray, columns_means=None,
                 columns_stds=None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -43,8 +46,8 @@ class MVF:
         return out, columns_means, columns_stds
 
     def normalize_data(self):
-        self.ind = normalize_array(self.ind)
-        self.dep = normalize_array(self.dep)
+        self.ind, self.ind_mean, self.ind_std = normalize_array(self.ind)
+        self.dep, self.dep_mean, self.dep_std = normalize_array(self.dep)
 
     def _compute_cost(self, ind, weights):
         m = len(self.dep)
@@ -65,3 +68,4 @@ class MVF:
             self.costs.append(cost)
 
         self.weights = weights[1:4]
+        self.predictions = predictions * self.dep_std + self.dep_mean
