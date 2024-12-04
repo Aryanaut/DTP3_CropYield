@@ -1,17 +1,6 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-def normalize_z(array: np.ndarray, columns_means=None,
-                columns_stds=None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    if columns_means is None:
-        columns_means=np.mean(array,axis=0)
-    if columns_stds is None:
-        columns_stds=np.std(array,axis=0)
-        
-    out = (array-columns_means)/columns_stds
-    
-    return out, columns_means, columns_stds
-
 def normalize_array(array):
     mean = array.mean(axis=0)
     std = array.std(axis=0)
@@ -26,7 +15,6 @@ class MVF:
     
         self.lr = 0.01
         self.iterations = 1000
-        self.IND = ind
         self.ind = ind
         self.dep = dep
         self.ind_mean, self.ind_std, self.dep_mean, self.dep_std = None, None, None, None
@@ -38,27 +26,17 @@ class MVF:
     
         self.costs = []
         self.predictions = None
-    
-    def normalize_z(self, array: np.ndarray, columns_means=None,
-                columns_stds=None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        if columns_means is None:
-            columns_means=np.mean(array,axis=0)
-        if columns_stds is None:
-            columns_stds=np.std(array,axis=0)
-            
-        out = (array-columns_means)/columns_stds
-        
-        return out, columns_means, columns_stds
 
     def normalize_data(self):
         self.ind, self.ind_mean, self.ind_std = normalize_array(self.ind)
         self.dep, self.dep_mean, self.dep_std = normalize_array(self.dep)
 
-    def _compute_cost(self, ind, weights):
+    def _compute_cost(self, ind, weights, lambda_reg=0.1):
         m = len(self.dep)
         predictions = np.dot(ind, weights)
         cost = (1 / (2 * m)) * np.sum((predictions - self.dep) ** 2)
-        return cost
+        reg_term = (lambda_reg / (2 * m)) * np.sum(weights[1:] ** 2) 
+        return cost + reg_term
 
     @property
     def get_biased_ind(self):
@@ -80,10 +58,11 @@ class MVF:
     def get_dep(self):
         return self.dep
     
-    def gradient_descent(self):
+    def gradient_descent(self, lambda_reg=0.1, tol=1e-6):
         ind = np.c_[np.ones(self.ind.shape[0]), self.ind]
         weights = np.zeros((ind.shape[1], 1))
         m = len(self.dep)
+        
         for _ in range(self.iterations):
             predictions = np.dot(ind, weights)
             errors = predictions - self.dep
@@ -91,6 +70,10 @@ class MVF:
             weights -= self.lr * gradient
             cost = self._compute_cost(ind, weights)
             self.costs.append(cost)
+
+            if len(self.costs) > 1 and abs(costs[-1] - costs[-2]) < tol: 
+                print("Convergence found")
+                break
 
         self.weights = weights
         self.predictions = predictions * self.dep_std + self.dep_mean
