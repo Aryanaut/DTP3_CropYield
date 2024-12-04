@@ -151,6 +151,7 @@ class MVFSplit(MVF):
         self.val_costs = []
 
         self.weights = np.zeros((X_train.shape[1], 1))
+        self.finaliterations = 0
         
         for i in range(self.iterations):
             # Training set gradient descent
@@ -168,6 +169,7 @@ class MVFSplit(MVF):
             # Compute validation cost
             val_cost = self._compute_cost(X_val, y_val, self.weights, lambda_reg)
             self.val_costs.append(val_cost)
+            self.finaliterations += 1
             
             # Early stopping based on training cost
             if len(self.costs) > 1 and abs(self.costs[-1] - self.costs[-2]) < tol:
