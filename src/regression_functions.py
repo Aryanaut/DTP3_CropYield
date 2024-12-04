@@ -29,6 +29,8 @@ class MVF:
         self.IND = ind
         self.ind = ind
         self.dep = dep
+        self.ind_mean, self.ind_std, self.dep_mean, self.dep_std = None, None, None, None
+
         self.weights = np.zeros((self.ind.shape[1], 1))
     
         self.costs = []
@@ -54,9 +56,21 @@ class MVF:
         predictions = np.dot(ind, weights)
         cost = (1 / (2 * m)) * np.sum((predictions - self.dep) ** 2)
         return cost
+
+    @property
+    def get_biased_ind(self):
+        return np.c_[np.ones(self.ind.shape[0]), self.ind]
+
+    @property
+    def get_dep_mean_std(self):
+        return self.dep_mean, self.dep_std
+
+    @property
+    def get_ind_mean_std(self):
+        return self.ind_mean, self.ind_std
     
     def gradient_descent(self):
-        ind = self.ind = np.c_[np.ones(self.ind.shape[0]), self.ind]
+        ind = np.c_[np.ones(self.ind.shape[0]), self.ind]
         weights = np.zeros((self.ind.shape[1], 1))
         m = len(self.dep)
         for _ in range(self.iterations):
